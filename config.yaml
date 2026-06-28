@@ -1,0 +1,8 @@
+# config.yaml
+# Output and template settings. Choose an OWASP cheat sheet with --sheet,
+# a privacy pattern with --pattern, or process a local Markdown file with --local.
+
+output_dir: output
+template_dir: templates
+template_name: skill.md.j2
+privacy_template_name: privacy_skill.md.j2
