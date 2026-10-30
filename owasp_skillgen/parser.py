@@ -37,6 +37,8 @@ class ParsedCheatSheet:
     recommendations: list[str]
     triggers: list[str]
     raw_filename: str
+    raw_markdown: str = ""
+    local_source: str = ""
 
 
 _LIST_ITEM_PATTERN = re.compile(r"^\s*(?:[-*+]|\d+\.)\s+(.*)")
@@ -252,4 +254,5 @@ def parse(markdown: str, filename: str = "") -> ParsedCheatSheet:
         recommendations=recommendations[:12],
         triggers=triggers,
         raw_filename=filename,
+        raw_markdown=markdown,
     )

@@ -7,7 +7,7 @@ from os import PathLike
 from pathlib import Path
 
 from skillgen_common.markdown import paragraphs, slugify as common_slugify
-from skillgen_common.rendering import ensure_output_dir, render_template
+from skillgen_common.rendering import ensure_output_dir, write_skill
 
 from .parser import ParsedPrivacyPattern, PrivacyPatternSection
 
@@ -40,11 +40,20 @@ def generate_privacy_pattern_skill(
     template_name: str = "privacy_skill.md.j2",
 ) -> Path:
     """Render one ParsedPrivacyPattern into a Skill Markdown file."""
-    rendered = render_template(template_dir, template_name, {"pattern": pattern})
-    out_dir = ensure_output_dir(output_dir)
-    out_path = out_dir / f"{slugify(pattern.title)}.md"
-    out_path.write_text(rendered, encoding="utf-8")
-    return out_path
+    return write_skill(
+        template_dir=template_dir,
+        template_name=template_name,
+        output_dir=output_dir,
+        context={"pattern": pattern},
+        namespace="privacy",
+        identity=pattern.source_path or pattern.raw_filename or pattern.title,
+        title=pattern.title,
+        description=(
+            f"Apply the {pattern.title} privacy pattern when designing, implementing, or "
+            "reviewing data handling that involves this pattern's problem and solution."
+        ),
+        source=pattern.raw_markdown,
+    )
 
 
 def privacy_pattern_to_knowledge_payload(pattern: ParsedPrivacyPattern) -> dict[str, object]:

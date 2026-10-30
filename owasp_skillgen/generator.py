@@ -13,7 +13,7 @@ from skillgen_common.markdown import (
     slugify as common_slugify,
     strip_inline_markdown,
 )
-from skillgen_common.rendering import ensure_output_dir, render_template
+from skillgen_common.rendering import ensure_output_dir, write_skill
 
 from .parser import CodeBlock, ParsedCheatSheet, Section
 
@@ -51,11 +51,20 @@ def generate_skill(
     """
     Render one ParsedCheatSheet into a Skill Markdown file.
     """
-    rendered = render_template(template_dir, template_name, {"sheet": sheet})
-    out_dir = ensure_output_dir(output_dir)
-    out_path = out_dir / f"{slugify(sheet.title)}.md"
-    out_path.write_text(rendered, encoding="utf-8")
-    return out_path
+    return write_skill(
+        template_dir=template_dir,
+        template_name=template_name,
+        output_dir=output_dir,
+        context={"sheet": sheet},
+        namespace="local" if sheet.local_source else "owasp",
+        identity=sheet.local_source or sheet.raw_filename or sheet.title,
+        title=sheet.title,
+        description=(
+            f"Review or implement {sheet.title} guidance when the requested design or code "
+            f"concerns this topic, using the bundled {'local document' if sheet.local_source else 'OWASP cheat sheet'}."
+        ),
+        source=sheet.raw_markdown,
+    )
 
 
 def _code_block_to_dict(code_block: CodeBlock, max_chars: int | None = None) -> dict[str, str]:

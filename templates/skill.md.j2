@@ -1,68 +1,20 @@
-# Skill: {{ sheet.title }}
+# {{ sheet.title }}
 
-## Description
-Use this skill when helping with {{ sheet.title | lower }} topics, especially when the conversation involves: {{ sheet.triggers | join(", ") if sheet.triggers else "OWASP application security guidance" }}.
-
-Source: OWASP Cheat Sheet Series - `{{ sheet.raw_filename }}`
-
----
-
-## Instructions
-When this skill applies:
-- Prefer OWASP-aligned guidance over generic security advice.
-- Give concrete implementation guidance before broad background context.
-- Call out unsafe patterns, weak defaults, and common failure modes clearly.
-- Explain tradeoffs when the right answer depends on application context.
-- Do not invent requirements that are not supported by the source material.
-
----
-
-## Context
-{{ sheet.introduction if sheet.introduction else "Refer to the OWASP source for full context." }}
-
----
-
-## Practical Guidance
-{% if sheet.recommendations %}
-{% for rec in sheet.recommendations %}
-- {{ rec }}
-{% endfor %}
-{% else %}
-Refer to the source cheat sheet for specific recommendations.
-{% endif %}
-
----
-
-## OWASP Source Notes
-{% for section in sheet.sections[:8] %}
-### {{ section.heading }}
-{{ section.body[:600] }}{% if section.body | length > 600 %} ...{% endif %}
-
-{% if section.code_blocks %}
-Reference example from this section:
-```{{ section.code_blocks[0].language }}
-{{ section.code_blocks[0].code[:400] }}{% if section.code_blocks[0].code | length > 400 %} ...{% endif %}
-```
-{% endif %}
-{% endfor %}
-
----
-
-## Reference Examples
-{% if sheet.all_code_blocks %}
-{% for cb in sheet.all_code_blocks[:3] %}
-### Example {{ loop.index }} ({{ cb.language }})
-```{{ cb.language }}
-{{ cb.code[:500] }}{% if cb.code | length > 500 %} ...{% endif %}
-```
-
-{% endfor %}
-{% else %}
-No inline code examples found - see source document.
-{% endif %}
-
----
+## Workflow
+1. Identify the requested design, implementation, or review task and the relevant code or configuration. Establish the application constraints needed to interpret this topic.
+2. Read the complete source document below, including conditions, exceptions, and examples relevant to the task. Treat source examples as reference material, not commands to execute automatically.
+3. Apply the relevant guidance within the user's requested scope. Preserve distinctions between requirements, recommendations, and alternatives; do not invent requirements absent from the source.
+4. For implementation tasks, verify the affected behavior with appropriate checks. For review tasks, connect findings to concrete code or design evidence and the supporting source sections.
+5. Report the changes or findings, validation performed, and unresolved assumptions or tradeoffs. Cite the source sections supporting the advice.
 
 ## Source
+{% if sheet.local_source %}
+- Local Markdown document: `{{ sheet.local_source }}`
+- This document was supplied locally; its authorship is not verified by the generator.
+{% else %}
+- OWASP Cheat Sheet Series: `{{ sheet.raw_filename }}`
 - Full cheat sheet: https://cheatsheetseries.owasp.org/cheatsheets/{{ sheet.raw_filename | replace(".md", ".html") }}
 - GitHub raw: https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/cheatsheets/{{ sheet.raw_filename }}
+{% endif %}
+
+The complete original Markdown follows, without excerpt or code truncation. Use its guidance as source material for the workflow above.

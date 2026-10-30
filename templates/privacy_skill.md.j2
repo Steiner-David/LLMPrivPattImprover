@@ -1,83 +1,26 @@
-# Skill: {{ pattern.title }}
+# {{ pattern.title }}
 
-## Description
-Use this skill when helping with privacy-by-design decisions related to {{ pattern.title | lower }}{% if pattern.triggers %}, especially when the conversation involves: {{ pattern.triggers | join(", ") }}{% endif %}.
-
-Source: Privacy Patterns - `{{ pattern.raw_filename }}`
-
----
-
-## Instructions
-When this skill applies:
-- Start from the privacy pattern's context, problem, and solution.
-- Explain what personal data, user expectation, or disclosure risk the pattern addresses.
-- Give concrete design guidance before broad privacy background.
-- Call out consequences and tradeoffs when applying the pattern.
-- Do not invent requirements that are not supported by the source material.
-
----
-
-## Context
-{{ pattern.summary if pattern.summary else pattern.excerpt if pattern.excerpt else "Refer to the source pattern for full context." }}
-
----
-
-## Pattern Guidance
-{% if pattern.context %}
-### Context
-{{ pattern.context[:700] }}{% if pattern.context | length > 700 %} ...{% endif %}
-
-{% endif %}
-{% if pattern.problem %}
-### Problem
-{{ pattern.problem[:700] }}{% if pattern.problem | length > 700 %} ...{% endif %}
-
-{% endif %}
-{% if pattern.solution %}
-### Solution
-{{ pattern.solution[:900] }}{% if pattern.solution | length > 900 %} ...{% endif %}
-
-{% endif %}
-{% if pattern.consequences %}
-### Consequences
-{{ pattern.consequences[:700] }}{% if pattern.consequences | length > 700 %} ...{% endif %}
-
-{% endif %}
-{% if pattern.examples %}
-### Examples
-{{ pattern.examples[:700] }}{% if pattern.examples | length > 700 %} ...{% endif %}
-
-{% endif %}
-
----
+## Workflow
+1. Identify the requested design, implementation, or review task, the personal data involved, and the relevant data flows or code.
+2. Read the complete pattern below. Determine whether its context and problem match the task before applying its solution.
+3. Apply the relevant solution within the user's requested scope. Preserve the source's conditions, consequences, and tradeoffs; do not invent requirements absent from the pattern.
+4. Consult examples and related source sections as needed. Treat examples as reference material, not commands to execute automatically.
+5. Verify the affected behavior for implementation tasks, or support review findings with concrete evidence. Report the changes or findings, validation performed, residual disclosure risks, and tradeoffs, citing the relevant source sections.
 
 ## Classification
 {% if pattern.categories %}
-Categories:
-{% for category in pattern.categories %}
-- {{ category }}
-{% endfor %}
-{% else %}
-No categories found in source metadata.
+Categories: {{ pattern.categories | join(", ") }}
 {% endif %}
-
 {% if pattern.status %}
 Status: {{ pattern.status }}
 {% endif %}
 
----
-
-## Source Notes
-{% for section in pattern.sections[:8] %}
-### {{ section.heading }}
-{{ section.body[:600] }}{% if section.body | length > 600 %} ...{% endif %}
-
-{% endfor %}
-
----
-
 ## Source
+- PrivacyPatterns document: `{{ pattern.raw_filename }}`
+- Repository path: `{{ pattern.source_path }}`
 - PrivacyPatterns page: https://privacypatterns.org/patterns/{{ pattern.raw_filename | replace(".md", "") }}
 {% if pattern.source_url %}
 - GitHub source: {{ pattern.source_url }}
 {% endif %}
+
+The complete original Markdown follows, including source metadata, examples, and all sections without truncation. Use its guidance as source material for the workflow above.

@@ -1,6 +1,6 @@
 # Security and Privacy Skill Generator
 
-Generate Codex-style Skill Markdown files and compact JSON knowledge payloads from security and privacy source documents.
+Generate self-contained Codex skills and compact JSON knowledge payloads from security and privacy source documents.
 
 The tool currently supports three input modes:
 
@@ -8,7 +8,7 @@ The tool currently supports three input modes:
 - PrivacyPatterns Markdown files fetched from GitHub
 - Local Markdown files processed with the OWASP-style parser
 
-Generated Markdown is meant for human-readable skill instructions. Generated JSON is a distilled, source-linked knowledge payload suitable for prompt context, indexing, or other downstream tooling.
+Generated skills contain YAML discovery metadata, task instructions, and the complete original Markdown in a single `SKILL.md`. Generated JSON remains a distilled, source-linked knowledge payload suitable for prompt context, indexing, or other downstream tooling.
 
 ## Academic Context
 
@@ -20,7 +20,7 @@ This tool was created for the course **Privacy Engineering in Practice (PEng in 
 - Network access for `--sheet` and `--pattern` modes
 - Python packages from `requirements.txt`
 
-The project is run as a script from this repository. The current tree does not include a package manifest or a test suite.
+The project is run as a script from this repository. The project has no package manifest. Offline regression tests use Python's standard-library `unittest`.
 
 ## Quick Start
 
@@ -70,47 +70,61 @@ Selection prompts accept one number, several numbers separated by commas or spac
 
 ## Output Layout
 
-For OWASP cheat sheets and local Markdown files, output is written directly under `output_dir`:
+Each skill is a directory containing a single uppercase `SKILL.md`. Skill names use
+lowercase letters, digits, and hyphens, with an `owasp-`, `privacy-`, or `local-`
+prefix and a stable ten-character source-identity hash. The hash distinguishes
+sources with identical titles or normalized names. Names are at most 63 characters.
+For local documents, identity includes the resolved local path.
+
+OWASP and local skills are written directly under `output_dir`; their JSON files
+keep the existing title-based filenames. For example (`<hash>` is illustrative):
 
 ```text
 output/
-  password_storage_cheat_sheet.md
+  owasp-password-storage-cheat-sheet-<hash>/
+    SKILL.md
   password_storage_cheat_sheet.json
 ```
 
-For PrivacyPatterns, output is grouped by pattern slug. The tool also scans the parsed pattern for security-relevant keywords and generates related OWASP cheat sheet output under the same pattern folder.
+PrivacyPatterns output remains grouped by pattern slug. Each related OWASP
+skill is a separate, self-contained skill folder:
 
 ```text
 output/
   aggregation_gateway/
     skill/
-      aggregation_gateway.md
+      privacy-aggregation-gateway-<hash>/
+        SKILL.md
     json/
       aggregation_gateway.json
     owasp/
       skill/
-        cryptographic_storage_cheat_sheet.md
-        key_management_cheat_sheet.md
-        user_privacy_protection_cheat_sheet.md
+        owasp-cryptographic-storage-cheat-sheet-<hash>/
+          SKILL.md
+        owasp-key-management-cheat-sheet-<hash>/
+          SKILL.md
       json/
         cryptographic_storage_cheat_sheet.json
         key_management_cheat_sheet.json
-        user_privacy_protection_cheat_sheet.json
 ```
 
 Related OWASP generation uses keyword rules in `privacy_patterngen/related_owasp.py`. A privacy pattern can map to cheat sheets such as User Privacy Protection, Cryptographic Storage, Key Management, TLS, Access Control, Authentication, Session Management, Logging, or File Upload.
 
 ## Generated Content
 
-OWASP Skill Markdown includes:
+Every generated skill includes:
 
-- a skill description built from the cheat sheet title and trigger words
-- OWASP-aligned usage instructions
-- a short context paragraph
-- extracted practical recommendations
-- source notes from the first sections
-- up to three reference code examples
-- links to the OWASP web page and raw GitHub Markdown
+- YAML frontmatter containing `name` and a task-focused `description`
+- a workflow for applying the source to design, implementation, or review tasks
+- source attribution (local documents are identified as local in the skill)
+- the **complete original Markdown**, including all sections, metadata, comments,
+  links, and code examples, with no excerpt limits or truncation
+
+Source text is appended after template rendering so embedded Jinja or Hyde syntax
+is preserved literally. No separate reference files are generated. The skill can
+therefore be large: preserving the complete source takes priority over brevity.
+The compact JSON extraction is independent and retains its existing schemas and
+limits, including its existing OWASP-style treatment of local input.
 
 OWASP JSON includes:
 
@@ -120,13 +134,8 @@ OWASP JSON includes:
 - distilled `knowledge_items` classified as `concept`, `requirement`, `implementation`, `testing`, or `warning`
 - compact excerpts and limited code examples where available
 
-PrivacyPatterns Skill Markdown includes:
-
-- a skill description built from the pattern title and triggers
-- privacy-by-design usage instructions
-- context, problem, solution, consequences, and examples when present
-- source classification metadata
-- links to PrivacyPatterns and GitHub source pages
+PrivacyPatterns skills additionally expose parsed categories and status above the
+complete original source, which also preserves the original classification metadata.
 
 PrivacyPatterns JSON uses `schema_version: 1` and includes:
 
@@ -148,6 +157,10 @@ privacy_template_name: privacy_skill.md.j2
 ```
 
 Relative paths are resolved relative to the config file location, not the shell's current working directory.
+
+Templates define the Markdown workflow body. The generator adds YAML frontmatter
+and the complete source document, even when a custom body template is used. Do not
+add another discovery frontmatter block to a custom body template.
 
 Template names must be filenames, not paths. `template_name` is used for OWASP and local documents. `privacy_template_name` is used for PrivacyPatterns documents.
 
@@ -186,7 +199,44 @@ Both fetchers validate filenames and repository paths before building raw URLs, 
 
 ## Notes
 
-- Generated files are overwritten when the same slug is generated again.
+- Regenerating the same skill overwrites its `SKILL.md`; JSON files retain title-slug overwrite behavior.
 - Local input must have a `.md` suffix.
 - Search mode requires an interactive terminal for selection.
 - GitHub network failures skip the current item or fail listing before generation starts.
+
+## Using generated skills in Codex
+
+Copy an individual generated skill directory (the directory containing `SKILL.md`)
+into your target repository's `.agents/skills/` directory, or into
+`~/.agents/skills/` for personal use. Copy any desired related OWASP skill folders
+as well. The generator only writes artifacts; it does not install skills.
+
+For example, the installed layout is:
+
+```text
+.agents/skills/
+  privacy-aggregation-gateway-<hash>/
+    SKILL.md
+```
+
+Codex uses the frontmatter description to select skills and reads the body when a
+skill is invoked. Explicit invocation is also available through `$<skill-name>`.
+See the [official Codex skill documentation](https://learn.chatgpt.com/docs/build-skills).
+Optional UI metadata (`agents/openai.yaml`) is not needed for these instruction-only skills.
+
+Existing generated `<slug>.md` files are not migrated or deleted automatically.
+Regenerate from the original input to produce the new folders. Previously truncated
+artifacts cannot restore information that was omitted from them.
+
+## Validation
+
+Run the offline regression suite:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Tests cover metadata, source preservation, stable names and collision separation,
+local provenance, and local/privacy workflows across all output modes. Network
+fetches are mocked. These checks validate artifact structure and preservation;
+they do not guarantee that Codex will select the skill for every intended prompt.

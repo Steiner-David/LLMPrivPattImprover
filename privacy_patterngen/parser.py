@@ -40,6 +40,7 @@ class ParsedPrivacyPattern:
     raw_filename: str
     source_path: str
     source_url: str
+    raw_markdown: str = ""
 
 
 _METADATA_PATTERN = re.compile(r"\{%\s*hyde(?P<body>.*?)%\}", re.IGNORECASE | re.DOTALL)
@@ -249,4 +250,5 @@ def parse_privacy_pattern(
         raw_filename=filename or source_path.rsplit("/", maxsplit=1)[-1],
         source_path=source_path,
         source_url=source_url,
+        raw_markdown=markdown,
     )

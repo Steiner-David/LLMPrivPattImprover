@@ -277,6 +277,8 @@ def process_one(
             return None
 
     sheet = parse(markdown, filename)
+    if local_path:
+        sheet.local_source = str(Path(local_path).resolve())
     print(
         f"  Parsed: '{sheet.title}' | {len(sheet.sections)} sections "
         f"| {len(sheet.all_code_blocks)} code blocks "
