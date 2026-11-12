@@ -196,14 +196,3 @@ Existing generated `<slug>.md` files are not migrated or deleted automatically.
 Regenerate from the original input to produce the new folders. Previously truncated
 artifacts cannot restore information that was omitted from them.
 
-## Validation
-
-Run the offline regression suite:
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-Tests cover skill-only output for local, OWASP, and privacy-pattern workflows,
-including related OWASP skills, source preservation, the compatibility `--skill`
-flag, and rejection of `--json`. Network fetches are mocked.
