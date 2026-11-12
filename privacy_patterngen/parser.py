@@ -23,7 +23,7 @@ class PrivacyPatternSection:
 
 @dataclass
 class ParsedPrivacyPattern:
-    """Structured representation used by privacy pattern templates and JSON."""
+    """Structured representation used by privacy pattern templates."""
 
     title: str
     excerpt: str

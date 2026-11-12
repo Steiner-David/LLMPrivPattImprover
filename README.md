@@ -1,6 +1,6 @@
 # Security and Privacy Skill Generator
 
-Generate self-contained Codex skills and compact JSON knowledge payloads from security and privacy source documents.
+Generate self-contained Codex skills from security and privacy source documents.
 
 The tool currently supports three input modes:
 
@@ -8,11 +8,7 @@ The tool currently supports three input modes:
 - PrivacyPatterns Markdown files fetched from GitHub
 - Local Markdown files processed with the OWASP-style parser
 
-Generated skills contain YAML discovery metadata, task instructions, and the complete original Markdown in a single `SKILL.md`. Generated JSON remains a distilled, source-linked knowledge payload suitable for prompt context, indexing, or other downstream tooling.
-
-## Academic Context
-
-This tool was created for the course **Privacy Engineering in Practice (PEng in Practice)** at the **University of Salzburg**.
+Generated skills contain YAML discovery metadata, task instructions, and the complete original Markdown in a single `SKILL.md`.
 
 ## Requirements
 
@@ -24,16 +20,16 @@ The project is run as a script from this repository. The project has no package 
 
 ## Quick Start
 
-Generate both Skill Markdown and JSON for an exact OWASP cheat sheet filename:
+Generate Skill Markdown for an exact OWASP cheat sheet filename:
 
 ```bash
 python main.py --sheet Password_Storage_Cheat_Sheet.md
 ```
 
-Search OWASP cheat sheets interactively and generate only JSON:
+Search OWASP cheat sheets interactively and generate skills:
 
 ```bash
-python main.py --sheet password --json
+python main.py --sheet password
 ```
 
 Search PrivacyPatterns interactively and generate only Skill Markdown:
@@ -51,20 +47,17 @@ python main.py --local ./my_cheat_sheet.md
 ## CLI
 
 ```text
-python main.py [--config CONFIG] (--sheet SHEET | --pattern PATTERN | --local LOCAL) [--skill | --json]
+python main.py [--config CONFIG] (--sheet SHEET | --pattern PATTERN | --local LOCAL) [--skill]
 ```
 
 Inputs:
 
 - `--sheet SHEET`: fetch an OWASP cheat sheet. If `SHEET` ends in `.md`, it is treated as an exact filename from the OWASP `cheatsheets/` directory. Otherwise it is used as a search term and you choose one or more matches interactively.
 - `--pattern PATTERN`: fetch a PrivacyPatterns document. If `PATTERN` ends in `.md`, it is matched against exact filenames from the PrivacyPatterns `patterns/` directory. Otherwise it is used as a search term and you choose one or more matches interactively.
-- `--local LOCAL`: read a local `.md` file instead of fetching from GitHub. Local files use the OWASP parser, OWASP Skill template, and OWASP JSON schema.
+- `--local LOCAL`: read a local `.md` file instead of fetching from GitHub. Local files use the OWASP parser and OWASP Skill template.
 
-Output modes:
-
-- default: generate both Markdown and JSON
-- `--skill`: generate only Skill Markdown
-- `--json`: generate only JSON knowledge
+Every run generates only Skill Markdown. `--skill` remains accepted for compatibility;
+`--json` is no longer supported. No JSON output files are generated.
 
 Selection prompts accept one number, several numbers separated by commas or spaces, `all`, `q`, `quit`, or `cancel`.
 
@@ -76,14 +69,12 @@ prefix and a stable ten-character source-identity hash. The hash distinguishes
 sources with identical titles or normalized names. Names are at most 63 characters.
 For local documents, identity includes the resolved local path.
 
-OWASP and local skills are written directly under `output_dir`; their JSON files
-keep the existing title-based filenames. For example (`<hash>` is illustrative):
+OWASP and local skills are written directly under `output_dir`. For example (`<hash>` is illustrative):
 
 ```text
 output/
   owasp-password-storage-cheat-sheet-<hash>/
     SKILL.md
-  password_storage_cheat_sheet.json
 ```
 
 PrivacyPatterns output remains grouped by pattern slug. Each related OWASP
@@ -95,17 +86,12 @@ output/
     skill/
       privacy-aggregation-gateway-<hash>/
         SKILL.md
-    json/
-      aggregation_gateway.json
     owasp/
       skill/
         owasp-cryptographic-storage-cheat-sheet-<hash>/
           SKILL.md
         owasp-key-management-cheat-sheet-<hash>/
           SKILL.md
-      json/
-        cryptographic_storage_cheat_sheet.json
-        key_management_cheat_sheet.json
 ```
 
 Related OWASP generation uses keyword rules in `privacy_patterngen/related_owasp.py`. A privacy pattern can map to cheat sheets such as User Privacy Protection, Cryptographic Storage, Key Management, TLS, Access Control, Authentication, Session Management, Logging, or File Upload.
@@ -123,27 +109,9 @@ Every generated skill includes:
 Source text is appended after template rendering so embedded Jinja or Hyde syntax
 is preserved literally. No separate reference files are generated. The skill can
 therefore be large: preserving the complete source takes priority over brevity.
-The compact JSON extraction is independent and retains its existing schemas and
-limits, including its existing OWASP-style treatment of local input.
-
-OWASP JSON includes:
-
-- `document_type: "owasp_cheat_sheet_knowledge"`
-- source links
-- prompt usage instructions
-- distilled `knowledge_items` classified as `concept`, `requirement`, `implementation`, `testing`, or `warning`
-- compact excerpts and limited code examples where available
 
 PrivacyPatterns skills additionally expose parsed categories and status above the
 complete original source, which also preserves the original classification metadata.
-
-PrivacyPatterns JSON uses `schema_version: 1` and includes:
-
-- `document_type: "privacy_pattern_knowledge"`
-- source links
-- category and status metadata
-- prompt usage instructions
-- structured context, problem, solution, consequences, examples, and source sections
 
 ## Configuration
 
@@ -177,7 +145,7 @@ main.py                    CLI, config loading, selection prompts, workflows
 config.yaml                default output and template configuration
 requirements.txt           runtime Python dependencies
 templates/                 Jinja templates for generated Skill Markdown
-owasp_skillgen/            OWASP fetcher, parser, Markdown renderer, JSON renderer
+owasp_skillgen/            OWASP fetcher, parser, Markdown renderer
 privacy_patterngen/        PrivacyPatterns fetcher, parser, renderer, related OWASP mapper
 skillgen_common/           shared HTTP, Markdown cleanup, slugging, and template helpers
 output/                    generated artifacts
@@ -199,7 +167,7 @@ Both fetchers validate filenames and repository paths before building raw URLs, 
 
 ## Notes
 
-- Regenerating the same skill overwrites its `SKILL.md`; JSON files retain title-slug overwrite behavior.
+- Regenerating the same skill overwrites its `SKILL.md`.
 - Local input must have a `.md` suffix.
 - Search mode requires an interactive terminal for selection.
 - GitHub network failures skip the current item or fail listing before generation starts.
@@ -236,7 +204,6 @@ Run the offline regression suite:
 python -m unittest discover -s tests -v
 ```
 
-Tests cover metadata, source preservation, stable names and collision separation,
-local provenance, and local/privacy workflows across all output modes. Network
-fetches are mocked. These checks validate artifact structure and preservation;
-they do not guarantee that Codex will select the skill for every intended prompt.
+Tests cover skill-only output for local, OWASP, and privacy-pattern workflows,
+including related OWASP skills, source preservation, the compatibility `--skill`
+flag, and rejection of `--json`. Network fetches are mocked.

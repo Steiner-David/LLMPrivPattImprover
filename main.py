@@ -2,25 +2,22 @@ import argparse
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Literal, Sequence
+from typing import Any, Callable, Sequence
 
 import yaml
 from jinja2 import TemplateError
 from requests import RequestException
 
 from owasp_skillgen.fetcher import fetch_cheatsheet, list_cheatsheets
-from owasp_skillgen.generator import generate_prompt_json, generate_skill
+from owasp_skillgen.generator import generate_skill
 from owasp_skillgen.parser import parse
 from privacy_patterngen.fetcher import PrivacyPatternSource, fetch_pattern, list_patterns
 from privacy_patterngen.generator import (
-    generate_privacy_pattern_json,
     generate_privacy_pattern_skill,
     slugify as slugify_privacy_pattern,
 )
 from privacy_patterngen.parser import parse_privacy_pattern
 from privacy_patterngen.related_owasp import related_owasp_cheatsheets
-
-OutputMode = Literal["both", "skill", "json"]
 
 
 @dataclass(frozen=True)
@@ -249,11 +246,9 @@ def process_one(
     filename: str,
     config: AppConfig,
     local_path: str | None = None,
-    output_mode: OutputMode = "both",
     skill_output_dir: Path | None = None,
-    json_output_dir: Path | None = None,
 ) -> tuple[Path, ...] | None:
-    """Read or fetch one Markdown file, parse it, and render the requested outputs."""
+    """Read or fetch one Markdown file, parse it, and render its skill."""
     print(f"\n-> Processing: {filename}")
 
     if local_path:
@@ -287,31 +282,18 @@ def process_one(
 
     generated_paths: list[Path] = []
 
-    if output_mode in ("both", "skill"):
-        try:
-            markdown_path = generate_skill(
-                sheet,
-                template_dir=config.template_dir,
-                output_dir=skill_output_dir or config.output_dir,
-                template_name=config.template_name,
-            )
-        except (OSError, TemplateError) as exc:
-            print(f"  x Failed to generate Markdown for {filename}: {exc}")
-            return None
-        generated_paths.append(markdown_path)
-        print(f"  OK Markdown written -> {markdown_path}")
-
-    if output_mode in ("both", "json"):
-        try:
-            json_path = generate_prompt_json(
-                sheet,
-                output_dir=json_output_dir or config.output_dir,
-            )
-        except OSError as exc:
-            print(f"  x Failed to generate JSON for {filename}: {exc}")
-            return None
-        generated_paths.append(json_path)
-        print(f"  OK JSON written -> {json_path}")
+    try:
+        markdown_path = generate_skill(
+            sheet,
+            template_dir=config.template_dir,
+            output_dir=skill_output_dir or config.output_dir,
+            template_name=config.template_name,
+        )
+    except (OSError, TemplateError) as exc:
+        print(f"  x Failed to generate Markdown for {filename}: {exc}")
+        return None
+    generated_paths.append(markdown_path)
+    print(f"  OK Markdown written -> {markdown_path}")
 
     return tuple(generated_paths)
 
@@ -319,7 +301,6 @@ def process_one(
 def process_privacy_pattern(
     source: PrivacyPatternSource,
     config: AppConfig,
-    output_mode: OutputMode = "both",
 ) -> tuple[Path, ...] | None:
     """Fetch one privacy pattern, render it, and render useful related OWASP outputs."""
     print(f"\n-> Processing privacy pattern: {source.name}")
@@ -345,30 +326,19 @@ def process_privacy_pattern(
     generated_paths: list[Path] = []
     pattern_output_dir = config.output_dir / slugify_privacy_pattern(pattern.title)
     pattern_skill_dir = pattern_output_dir / "skill"
-    pattern_json_dir = pattern_output_dir / "json"
 
-    if output_mode in ("both", "skill"):
-        try:
-            markdown_path = generate_privacy_pattern_skill(
-                pattern,
-                template_dir=config.template_dir,
-                output_dir=pattern_skill_dir,
-                template_name=config.privacy_template_name,
-            )
-        except (OSError, TemplateError) as exc:
-            print(f"  x Failed to generate Markdown for {source.name}: {exc}")
-            return None
-        generated_paths.append(markdown_path)
-        print(f"  OK Markdown written -> {markdown_path}")
-
-    if output_mode in ("both", "json"):
-        try:
-            json_path = generate_privacy_pattern_json(pattern, output_dir=pattern_json_dir)
-        except OSError as exc:
-            print(f"  x Failed to generate JSON for {source.name}: {exc}")
-            return None
-        generated_paths.append(json_path)
-        print(f"  OK JSON written -> {json_path}")
+    try:
+        markdown_path = generate_privacy_pattern_skill(
+            pattern,
+            template_dir=config.template_dir,
+            output_dir=pattern_skill_dir,
+            template_name=config.privacy_template_name,
+        )
+    except (OSError, TemplateError) as exc:
+        print(f"  x Failed to generate Markdown for {source.name}: {exc}")
+        return None
+    generated_paths.append(markdown_path)
+    print(f"  OK Markdown written -> {markdown_path}")
 
     related_owasp = related_owasp_cheatsheets(pattern)
     if related_owasp:
@@ -389,9 +359,7 @@ def process_privacy_pattern(
         owasp_paths = process_one(
             filename,
             related_config,
-            output_mode=output_mode,
             skill_output_dir=related_config.output_dir / "skill",
-            json_output_dir=related_config.output_dir / "json",
         )
         if owasp_paths is None:
             return None
@@ -403,7 +371,7 @@ def process_privacy_pattern(
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Generate LLM Skill files and JSON knowledge from OWASP cheat sheets "
+            "Generate LLM Skill files from OWASP cheat sheets "
             "or privacy patterns"
         )
     )
@@ -424,22 +392,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     source.add_argument("--local", help="Path to a local .md file to process instead of fetching")
-    output = parser.add_mutually_exclusive_group()
-    output.add_argument(
+    parser.add_argument(
         "--skill",
-        action="store_const",
-        const="skill",
-        dest="output_mode",
-        help="Generate only Skill Markdown",
+        action="store_true",
+        help="Generate Skill Markdown (the default; retained for compatibility)",
     )
-    output.add_argument(
-        "--json",
-        action="store_const",
-        const="json",
-        dest="output_mode",
-        help="Generate only JSON knowledge",
-    )
-    parser.set_defaults(output_mode="both")
     return parser
 
 
@@ -453,14 +410,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.exit(2, f"Failed to load config: {exc}\n")
 
     print(f"Using config: {config_path}")
-    output_mode: OutputMode = args.output_mode
     failed = False
 
     if args.local:
         filename = Path(args.local).name
-        failed = (
-            process_one(filename, config, local_path=args.local, output_mode=output_mode) is None
-        )
+        failed = process_one(filename, config, local_path=args.local) is None
     elif args.pattern:
         try:
             available_sources = list_patterns()
@@ -472,10 +426,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             failed = True
 
         for source in selected_sources:
-            if process_privacy_pattern(source, config, output_mode=output_mode) is None:
+            if process_privacy_pattern(source, config) is None:
                 failed = True
     elif args.sheet.endswith(".md"):
-        failed = process_one(args.sheet, config, output_mode=output_mode) is None
+        failed = process_one(args.sheet, config) is None
     else:
         try:
             available_filenames = list_cheatsheets()
@@ -483,7 +437,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             parser.exit(1, f"Failed to list OWASP cheat sheets: {exc}\n")
 
         for filename in choose_cheatsheets(args.sheet, available_filenames):
-            if process_one(filename, config, output_mode=output_mode) is None:
+            if process_one(filename, config) is None:
                 failed = True
 
     print("\nDone.")

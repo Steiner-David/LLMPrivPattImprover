@@ -1,4 +1,4 @@
-"""Small Markdown-normalization helpers used by parsers and JSON renderers."""
+"""Small Markdown-normalization helpers used by parsers."""
 
 from __future__ import annotations
 
